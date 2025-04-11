@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Karaokê Básico com JavaScript</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-image: url("https://media.giphy.com/media/BATNoXBVRXso8NEeun/giphy.gif");
+      
+      background-size: 100% 100%;
+      background-repeat: no-repeat;
+      background-attachment: fixed;
+      
+    }
+
+    h1 {
+      text-align: center;
+      margin: 20px 0;
+      color: #fff;
+    }
+
+
+    .buttons-container {
+      display: flex;
+      justify-content: center;
+      margin-top: 20px;
+    }
+
+    .button {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background-color: #3498db;
+      margin: 0 10px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    .button:hover {
+      background-color: #2980b9;
+    }
+
+    #audioVisualizer {
+      width: 50%;
+      height: 150px;
+      margin-top: 20px;
+      background-color: #f0f0f0;
+      border-radius: 30px;
+    }
+
+    /* Responsividade */
+    @media (max-width: 600px) {
+      .container {
+        padding: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Karaokê Básico</h1>
+    <div class="buttons-container">
+      <div class="button" onclick="startKaraoke()">▶️</div>
+      <div class="button" onclick="stopKaraoke()">⏹️</div>
+    </div>
+    <center>
+    <div id="audioVisualizer"></div>
+  </div>
+
+  <script>
+    let audioStream;
+let audioContext;
+let analyserNode;
+let microphone;
+
+function startKaraoke() {
+  navigator.mediaDevices.getUserMedia({ audio: true })
+    .then((stream) => {
+      audioStream = stream;
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      analyserNode = audioContext.createAnalyser();
+      microphone = audioContext.createMediaStreamSource(audioStream);
+
+      microphone.connect(analyserNode);
+      analyserNode.connect(audioContext.destination);
+
+      visualizarAudio();
+    })
+    .catch((error) => {
+      console.error('Erro ao acessar o microfone:', error);
+    });
+}
+
+function visualizarAudio() {
+  const canvas = document.getElementById('audioVisualizer');
+  const canvasCtx = canvas.getContext('2d');
+
+  analyserNode.fftSize = 256;
+  const bufferLength = analyserNode.frequencyBinCount;
+  const dataArray = new Uint8Array(bufferLength);
+
+  canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
+
+  function draw() {
+    analyserNode.getByteFrequencyData(dataArray);
+
+    canvasCtx.fillStyle = 'rgb(0, 0, 0)';
+    canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const barWidth = (canvas.width / bufferLength) * 2;
+    let barHeight;
+    let x = 0;
+
+    for (let i = 0; i < bufferLength; i++) {
+      barHeight = dataArray[i];
+
+      canvasCtx.fillStyle = `rgb(${barHeight + 100},50,50)`;
+      canvasCtx.fillRect(x, canvas.height - barHeight / 2, barWidth, barHeight / 2);
+
+      x += barWidth + 1;
+    }
+
+    requestAnimationFrame(draw);
+  }
+
+  draw();
+}
+
+function stopKaraoke() {
+  if (audioStream) {
+    const tracks = audioStream.getTracks();
+    tracks.forEach((track) => track.stop());
+    audioContext.close();
+  }
+}
+  </script>
+</body>
+</html>
